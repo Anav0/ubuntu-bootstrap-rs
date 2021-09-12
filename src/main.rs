@@ -1,0 +1,72 @@
+use colored::*;
+use std::collections::HashSet;
+use std::env;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::io::LineWriter;
+use std::process::Command;
+
+#[allow(dead_code, unused_variables, unused_imports)]
+fn main() {
+    let home_dir = env::var("HOME").expect("Failed to fetch HOME env variable");
+
+    //println!("{}", String::from_utf8_lossy(&output.stdout));
+
+    //Updates zshrc and bashrc files with exports defined in 'export' file
+    handle_exports(home_dir);
+}
+
+fn handle_exports(home_dir: String) {
+    let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
+    let mut exports_found_in_zshrc: HashSet<String> = HashSet::new();
+
+    println!("{}\n", "Inserting exports into zshrc and bashrc".bold());
+
+    for (path, exports_found) in [
+        (".zshrc", &mut exports_found_in_zshrc),
+        (".bashrc", &mut exports_found_in_bashrc),
+    ] {
+        let f = File::open(format!("{}/{}", home_dir, path))
+            .expect(&format!("Failed to open '{}'", path));
+
+        let reader = BufReader::new(f);
+
+        for line in reader.lines() {
+            let content = line.expect(&format!("Failed to read line of '{}'", path));
+            if content.starts_with("export ") {
+                exports_found.insert(content);
+            }
+        }
+    }
+
+    let mut bashrc_appender = OpenOptions::new()
+        .append(true)
+        .open(format!("{}/{}", home_dir, ".bashrc"))
+        .expect("Failed to open zshrc");
+
+    let mut zshrc_appender = OpenOptions::new()
+        .append(true)
+        .open(format!("{}/{}", home_dir, ".zshrc"))
+        .expect("Failed to open zshrc");
+
+    for (path, writer, exports_found) in [
+        (".zshrc", &mut zshrc_appender, &exports_found_in_zshrc),
+        (".bashrc", &mut bashrc_appender, &exports_found_in_bashrc),
+    ] {
+        let exports_file = File::open("./exports").expect("Failed to open 'exports' file");
+        let exports_reader = BufReader::new(exports_file);
+        for line in exports_reader.lines() {
+            let content = line.expect("Failed to process line in 'export' file ");
+            if content.starts_with("export ") {
+                if exports_found.contains(&content) {
+                    println!("{} {}", path.yellow().italic(), content.yellow());
+                } else {
+                    println!("{} {}", path.green().italic(), &content.green());
+                    writer.write((content + "\n").as_bytes()).expect("msg");
+                }
+            }
+        }
+    }
+}
