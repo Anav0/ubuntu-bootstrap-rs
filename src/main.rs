@@ -1,23 +1,73 @@
 use colored::*;
 use std::collections::HashSet;
 use std::env;
+use std::fs::copy;
+use std::fs::read_dir;
+use std::fs::remove_dir_all;
+use std::fs::DirBuilder;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::LineWriter;
+use std::path::Path;
 use std::process::Command;
 
 #[allow(dead_code, unused_variables, unused_imports)]
 fn main() {
-    let home_dir = env::var("HOME").expect("Failed to fetch HOME env variable");
+    let home_dir = String::from("/home/igor");
 
     update_apt();
 
     install_apps();
 
-    //Updates zshrc and bashrc files with exports defined in 'export' file
+    place_dotfiles(&home_dir);
+
     handle_exports(home_dir);
+    println!("Done!");
+}
+
+fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
+    println!("{}", "Cloning and placing dotfiles".bold());
+    let folder_iter = read_dir(path).expect("Failed to read files in tmp folder for dotfiles");
+    for read_dir in folder_iter {
+        let entry = read_dir.expect("msg");
+        let entry_path = entry.path();
+        let entry_path_str = entry_path.to_str().unwrap();
+        if entry.metadata().unwrap().is_dir() {
+            copy_directory(entry_path_str, tmp_dir, home_dir);
+        } else {
+            let dst_path_str = entry_path_str.replace(tmp_dir, home_dir);
+            if dst_path_str.contains(".git") {
+                continue;
+            }
+            copy(entry_path_str, dst_path_str)
+                .expect(&format!("Failed to copy file: {}", entry_path_str));
+        }
+    }
+}
+
+fn place_dotfiles(home_dir: &str) {
+    let tmp_folder = Path::new("/tmp/dot");
+    if tmp_folder.exists() {
+        remove_dir_all(tmp_folder).expect("Failed to remove tmp folder for dotfiles");
+    }
+
+    DirBuilder::new()
+        .create(tmp_folder)
+        .expect("Failed to create tmp folder for dotfiles");
+
+    let output = Command::new("git")
+        .arg("clone")
+        .arg("https://github.com/Anav0/dotfiles")
+        .arg(tmp_folder)
+        .output()
+        .expect("Failed to git clone dotfiles");
+
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+    println!("{}", String::from_utf8_lossy(&output.stderr));
+    let tmp_folder_str = tmp_folder.to_str().unwrap();
+    copy_directory(tmp_folder_str, tmp_folder_str, home_dir);
 }
 
 fn update_apt() {
