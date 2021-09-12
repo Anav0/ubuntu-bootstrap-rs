@@ -12,12 +12,26 @@ use std::process::Command;
 fn main() {
     let home_dir = env::var("HOME").expect("Failed to fetch HOME env variable");
 
-    //println!("{}", String::from_utf8_lossy(&output.stdout));
+    // Update apt after installation
+    update_apt();
 
     //Updates zshrc and bashrc files with exports defined in 'export' file
     handle_exports(home_dir);
 }
 
+fn update_apt() {
+    println!("{}", "Updating apt".bold());
+    let output = Command::new("apt")
+        .arg("update")
+        .output()
+        .expect("Failed to update apt");
+    let err = String::from_utf8_lossy(&output.stderr);
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+    println!("{}", err);
+    if !err.is_empty() {
+        panic!("");
+    }
+}
 fn handle_exports(home_dir: String) {
     let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
     let mut exports_found_in_zshrc: HashSet<String> = HashSet::new();
@@ -28,7 +42,9 @@ fn handle_exports(home_dir: String) {
         (".zshrc", &mut exports_found_in_zshrc),
         (".bashrc", &mut exports_found_in_bashrc),
     ] {
-        let f = File::open(format!("{}/{}", home_dir, path))
+        let f = OpenOptions::new()
+            .read(true)
+            .open(&format!("{}/{}", home_dir, path))
             .expect(&format!("Failed to open '{}'", path));
 
         let reader = BufReader::new(f);
