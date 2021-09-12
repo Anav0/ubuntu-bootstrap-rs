@@ -12,8 +12,9 @@ use std::process::Command;
 fn main() {
     let home_dir = env::var("HOME").expect("Failed to fetch HOME env variable");
 
-    // Update apt after installation
     update_apt();
+
+    install_apps();
 
     //Updates zshrc and bashrc files with exports defined in 'export' file
     handle_exports(home_dir);
@@ -28,9 +29,25 @@ fn update_apt() {
     let err = String::from_utf8_lossy(&output.stderr);
     println!("{}", String::from_utf8_lossy(&output.stdout));
     println!("{}", err);
-    if !err.is_empty() {
-        panic!("");
-    }
+}
+fn install_apps() {
+    let mut apps_file = String::new();
+    File::open("./apt_apps")
+        .expect("Failed to load apps file")
+        .read_to_string(&mut apps_file)
+        .expect("Failed to load apps file");
+
+    let names: Vec<&str> = apps_file.split("\n").collect();
+
+    let output = Command::new("apt")
+        .arg("install")
+        .arg("-y")
+        .args(names)
+        .output()
+        .expect("Failed to install apt apps");
+
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+    println!("{}", String::from_utf8_lossy(&output.stderr));
 }
 fn handle_exports(home_dir: String) {
     let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
