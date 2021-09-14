@@ -24,11 +24,11 @@ fn main() {
     place_dotfiles(&home_dir);
 
     handle_exports(home_dir);
+
     println!("Done!");
 }
 
 fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
-    println!("{}", "Cloning and placing dotfiles".bold());
     let folder_iter = read_dir(path).expect("Failed to read files in tmp folder for dotfiles");
     for read_dir in folder_iter {
         let entry = read_dir.expect("msg");
@@ -48,6 +48,7 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
 }
 
 fn place_dotfiles(home_dir: &str) {
+    println!("{}", "Cloning and placing dotfiles".bold());
     let tmp_folder = Path::new("/tmp/dot");
     if tmp_folder.exists() {
         remove_dir_all(tmp_folder).expect("Failed to remove tmp folder for dotfiles");
@@ -76,10 +77,10 @@ fn update_apt() {
         .arg("update")
         .output()
         .expect("Failed to update apt");
-    let err = String::from_utf8_lossy(&output.stderr);
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-    println!("{}", err);
+    // println!("{}", String::from_utf8_lossy(&output.stdout));
+    println!("{}", String::from_utf8_lossy(&output.stderr));
 }
+
 fn install_apps() {
     let mut apps_file = String::new();
     File::open("./apt_apps")
@@ -89,6 +90,8 @@ fn install_apps() {
 
     let names: Vec<&str> = apps_file.split("\n").collect();
 
+    println!("Installing apps: {:?}", names);
+
     let output = Command::new("apt")
         .arg("install")
         .arg("-y")
@@ -96,9 +99,9 @@ fn install_apps() {
         .output()
         .expect("Failed to install apt apps");
 
-    println!("{}", String::from_utf8_lossy(&output.stdout));
     println!("{}", String::from_utf8_lossy(&output.stderr));
 }
+
 fn handle_exports(home_dir: String) {
     let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
     let mut exports_found_in_zshrc: HashSet<String> = HashSet::new();
