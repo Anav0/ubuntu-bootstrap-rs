@@ -18,4 +18,9 @@ libfontconfig1-dev
 libxcb-xfixes0-dev
 libxkbcommon-dev
 python3
-
+feh
+compton
+polybar
+dmenu
+rofi
+picom
