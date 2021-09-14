@@ -1,16 +1,12 @@
 use colored::*;
 use std::collections::HashSet;
-use std::env;
-use std::error::Error;
-use std::fs::copy;
-use std::fs::read_dir;
 use std::fs::remove_dir_all;
 use std::fs::DirBuilder;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::fs::{copy, read_dir};
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::io::LineWriter;
 use std::path::Path;
 use std::process::Command;
 
@@ -48,8 +44,48 @@ impl AppsInstaller for AptInstaller<'_> {
             .expect("Failed to install apt apps");
 
         println!("{}", String::from_utf8_lossy(&output.stderr));
-
+        if !output.status.success() {
+            panic!("Failed to install apt apps")
+        }
         Ok(String::from("Apt apps installed!"))
+    }
+}
+
+struct CargoInstaller<'a> {
+    path_to_app_names: &'a str,
+}
+
+impl<'a> CargoInstaller<'a> {
+    fn new(path_to_app_names: &'a str) -> Self {
+        Self { path_to_app_names }
+    }
+}
+
+impl AppsInstaller for CargoInstaller<'_> {
+    fn install(&self) -> Result<String, String> {
+        println!("{}", "Installing cargo apps".bold());
+        let mut apps_file = String::new();
+        File::open(self.path_to_app_names)
+            .expect("Failed to load cargo apps file")
+            .read_to_string(&mut apps_file)
+            .expect("Failed to load cargo apps file");
+
+        let names: Vec<&str> = apps_file.split("\n").collect();
+
+        for name in names {
+            let output = Command::new("cargo")
+                .arg("install")
+                .arg(name.trim())
+                .output()
+                .expect(&format!("Failed to install '{}'", name.trim()));
+
+            println!("{}", String::from_utf8_lossy(&output.stderr));
+            if !output.status.success() {
+                panic!("Failed to install cargo apps")
+            }
+            println!("{} {}", "Installed".green(), name.green());
+        }
+        Ok(String::from("Cargo apps installed"))
     }
 }
 
@@ -57,25 +93,16 @@ impl AppsInstaller for AptInstaller<'_> {
 fn main() {
     let home_dir = String::from("/home/igor");
 
-    // update_apt();
+    update_apt();
 
-    let apt_installer = AptInstaller::new("./apps");
+    install_apps();
 
-    for installer in [apt_installer] {
-        match installer.install() {
-            Ok(msg) => println!("{}", msg),
-            Err(err_msg) => println!("{}", err_msg),
-        }
-    }
+    place_dotfiles(&home_dir);
 
-    // place_dotfiles(&home_dir);
-
-    // handle_exports(home_dir);
+    handle_exports(&home_dir);
 
     println!("Done!");
 }
-
-fn install_apps_from_source() {}
 
 fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
     let folder_iter = read_dir(path).expect("Failed to read files in tmp folder for dotfiles");
@@ -130,9 +157,20 @@ fn update_apt() {
     println!("{}", String::from_utf8_lossy(&output.stderr));
 }
 
-fn install_apps() {}
+fn install_apps() {
+    let apt_installer = AptInstaller::new("./apt_apps");
+    let cargo_installer = CargoInstaller::new("./cargo_apps");
+    let installers: [&dyn AppsInstaller; 2] = [&apt_installer, &cargo_installer];
 
-fn handle_exports(home_dir: String) {
+    for installer in installers {
+        match installer.install() {
+            Ok(msg) => println!("{}", msg),
+            Err(err_msg) => println!("{}", err_msg),
+        }
+    }
+}
+
+fn handle_exports(home_dir: &str) {
     let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
     let mut exports_found_in_zshrc: HashSet<String> = HashSet::new();
 
