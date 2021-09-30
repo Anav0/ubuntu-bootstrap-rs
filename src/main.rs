@@ -1,10 +1,6 @@
 use colored::*;
 use std::collections::HashSet;
-use std::fs::remove_dir_all;
-use std::fs::DirBuilder;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::fs::{copy, read_dir};
+use std::fs::{copy, read_dir, remove_dir_all, DirBuilder, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
@@ -97,17 +93,23 @@ fn main() {
 
     install_apps();
 
+    //Install fonts?
+
     place_dotfiles(&home_dir);
 
-    handle_exports(&home_dir);
+    place_exports(&home_dir);
 
     println!("Done!");
+}
+
+fn print_header(text: &str) {
+    println!("{}", text.bold().bright_blue());
 }
 
 fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
     let folder_iter = read_dir(path).expect("Failed to read files in tmp folder for dotfiles");
     for read_dir in folder_iter {
-        let entry = read_dir.expect("msg");
+        let entry = read_dir.expect(format!("Failed to read file {:?} ", path).as_str());
         let entry_path = entry.path();
         let entry_path_str = entry_path.to_str().unwrap();
         if entry.metadata().unwrap().is_dir() {
@@ -118,13 +120,13 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
                 continue;
             }
             copy(entry_path_str, dst_path_str)
-                .expect(&format!("Failed to copy file: {}", entry_path_str));
+                .expect(&format!("Failed to copy file from {}", entry_path_str));
         }
     }
 }
 
 fn place_dotfiles(home_dir: &str) {
-    println!("{}", "Cloning and placing dotfiles".bold());
+    print_header("Cloning and placing dotfiles");
     let tmp_folder = Path::new("/tmp/dot");
     if tmp_folder.exists() {
         remove_dir_all(tmp_folder).expect("Failed to remove tmp folder for dotfiles");
@@ -141,23 +143,22 @@ fn place_dotfiles(home_dir: &str) {
         .output()
         .expect("Failed to git clone dotfiles");
 
-    println!("{}", String::from_utf8_lossy(&output.stdout));
     println!("{}", String::from_utf8_lossy(&output.stderr));
     let tmp_folder_str = tmp_folder.to_str().unwrap();
     copy_directory(tmp_folder_str, tmp_folder_str, home_dir);
 }
 
 fn update_apt() {
-    println!("{}", "Updating apt".bold());
+    print_header("Updating apt");
     let output = Command::new("apt")
         .arg("update")
         .output()
         .expect("Failed to update apt");
-    // println!("{}", String::from_utf8_lossy(&output.stdout));
     println!("{}", String::from_utf8_lossy(&output.stderr));
 }
 
 fn install_apps() {
+    print_header("Installing programs");
     let apt_installer = AptInstaller::new("./apt_apps");
     let cargo_installer = CargoInstaller::new("./cargo_apps");
     let installers: [&dyn AppsInstaller; 2] = [&apt_installer, &cargo_installer];
@@ -170,11 +171,11 @@ fn install_apps() {
     }
 }
 
-fn handle_exports(home_dir: &str) {
+fn place_exports(home_dir: &str) {
+    print_header("Inserting exports into zshrc and bashrc");
+
     let mut exports_found_in_bashrc: HashSet<String> = HashSet::new();
     let mut exports_found_in_zshrc: HashSet<String> = HashSet::new();
-
-    println!("{}\n", "Inserting exports into zshrc and bashrc".bold());
 
     for (path, exports_found) in [
         (".zshrc", &mut exports_found_in_zshrc),
