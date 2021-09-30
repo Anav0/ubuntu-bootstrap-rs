@@ -30,9 +30,13 @@ impl AppsInstaller for AptInstaller<'_> {
 
         let names: Vec<&str> = apps_file.split("\n").collect();
 
-        println!("Installing apps: {:?}", names);
+        print!("{}", "Installing apt apps: ".bright_white());
+        for name in &names {
+            print!("{} ", name.bright_white())
+        }
 
-        let output = Command::new("apt")
+        let output = Command::new("sudo")
+            .arg("apt")
             .arg("install")
             .arg("-y")
             .args(names)
@@ -59,7 +63,6 @@ impl<'a> CargoInstaller<'a> {
 
 impl AppsInstaller for CargoInstaller<'_> {
     fn install(&self) -> Result<String, String> {
-        println!("{}", "Installing cargo apps".bold());
         let mut apps_file = String::new();
         File::open(self.path_to_app_names)
             .expect("Failed to load cargo apps file")
@@ -67,8 +70,15 @@ impl AppsInstaller for CargoInstaller<'_> {
             .expect("Failed to load cargo apps file");
 
         let names: Vec<&str> = apps_file.split("\n").collect();
+        print!("{}", "Installing cargo apps: ".bright_white());
+        for name in &names {
+            print!("{} ", name.bright_white());
+        }
 
         for name in names {
+            if name.trim() == "" {
+                continue;
+            }
             let output = Command::new("cargo")
                 .arg("install")
                 .arg(name.trim())
@@ -88,6 +98,11 @@ impl AppsInstaller for CargoInstaller<'_> {
 #[allow(dead_code, unused_variables, unused_imports)]
 fn main() {
     let home_dir = String::from("/home/igor");
+
+    println!(
+        "{}\n",
+        "Setting up ubuntu system...".bold().bright_magenta()
+    );
 
     update_apt();
 
@@ -150,11 +165,12 @@ fn place_dotfiles(home_dir: &str) {
 
 fn update_apt() {
     print_header("Updating apt");
-    let output = Command::new("apt")
+    let status = Command::new("sudo")
+        .arg("apt")
         .arg("update")
-        .output()
+        .status()
         .expect("Failed to update apt");
-    println!("{}", String::from_utf8_lossy(&output.stderr));
+    println!("{}", status);
 }
 
 fn install_apps() {
@@ -165,8 +181,8 @@ fn install_apps() {
 
     for installer in installers {
         match installer.install() {
-            Ok(msg) => println!("{}", msg),
             Err(err_msg) => println!("{}", err_msg),
+            _ => {}
         }
     }
 }
