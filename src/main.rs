@@ -1,5 +1,7 @@
 use colored::*;
+use core::panic;
 use std::collections::HashSet;
+use std::env::{args, current_exe, temp_dir, var, var_os};
 use std::fs::{copy, read_dir, remove_dir_all, DirBuilder, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -97,7 +99,19 @@ impl AppsInstaller for CargoInstaller<'_> {
 
 #[allow(dead_code, unused_variables, unused_imports)]
 fn main() {
-    let home_dir = String::from("/home/igor");
+    let home_dir = var("HOME")
+        .expect("Failed to read $HOME variable")
+        .to_string();
+
+    let mut tmp_dir = temp_dir();
+    let path_to_exe = current_exe().expect("Failed to get name of current executable");
+
+    let program_name = path_to_exe
+        .file_name()
+        .expect("Failed to extract executable name");
+
+    tmp_dir.push(program_name);
+    let tmp_dir_str = tmp_dir.to_str().unwrap();
 
     println!(
         "{}\n",
@@ -110,11 +124,11 @@ fn main() {
 
     //Install fonts?
 
-    place_dotfiles(&home_dir);
+    place_dotfiles(&home_dir, tmp_dir_str);
 
     place_exports(&home_dir);
 
-    println!("Done!");
+    println!("\n{}\n", "Done!".bold().bright_magenta());
 }
 
 fn print_header(text: &str) {
@@ -140,12 +154,8 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
     }
 }
 
-fn place_dotfiles(home_dir: &str) {
+fn place_dotfiles(home_dir: &str, tmp_folder: &str) {
     print_header("Cloning and placing dotfiles");
-    let tmp_folder = Path::new("/tmp/dot");
-    if tmp_folder.exists() {
-        remove_dir_all(tmp_folder).expect("Failed to remove tmp folder for dotfiles");
-    }
 
     DirBuilder::new()
         .create(tmp_folder)
@@ -159,8 +169,7 @@ fn place_dotfiles(home_dir: &str) {
         .expect("Failed to git clone dotfiles");
 
     println!("{}", String::from_utf8_lossy(&output.stderr));
-    let tmp_folder_str = tmp_folder.to_str().unwrap();
-    copy_directory(tmp_folder_str, tmp_folder_str, home_dir);
+    copy_directory(tmp_folder, tmp_folder, home_dir);
 }
 
 fn update_apt() {
