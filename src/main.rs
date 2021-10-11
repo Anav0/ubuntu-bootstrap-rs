@@ -1,11 +1,10 @@
 use colored::*;
 use core::panic;
 use std::collections::HashSet;
-use std::env::{args, current_exe, temp_dir, var, var_os};
-use std::fs::{copy, create_dir_all, read_dir, remove_dir_all, DirBuilder, File, OpenOptions};
+use std::env::{current_exe, temp_dir, var};
+use std::fs::{copy, create_dir_all, read_dir, DirBuilder, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::Path;
 use std::process::Command;
 
 trait AppsInstaller {
@@ -51,7 +50,7 @@ impl AppsInstaller for AptInstaller<'_> {
 
             println!("{}", String::from_utf8_lossy(&output.stderr));
             if !output.status.success() {
-                panic!("Failed to install apt apps")
+                panic!("Failed to install {}", name);
             }
             i += 1;
         }
