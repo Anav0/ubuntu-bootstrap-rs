@@ -167,6 +167,7 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
             let dst_path_str = entry_path_str.replace(tmp_dir, home_dir);
             create_dir_all(&dst_path_str)
                 .expect(&format!("Failed to create dir: {}", &dst_path_str));
+            println!("Crated directory: {}", &dst_path_str);
             copy_directory(entry_path_str, tmp_dir, home_dir);
         } else {
             let dst_path_str = entry_path_str.replace(tmp_dir, home_dir);
@@ -174,6 +175,7 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
                 "Failed to copy file from {} to {}",
                 entry_path_str, &dst_path_str
             ));
+            println!("Copied {} to {}", &entry_path_str, &dst_path_str);
         }
     }
 }
