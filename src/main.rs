@@ -110,7 +110,7 @@ impl AppsInstaller for ZshInstaller {
         print_header("Installing oh my zsh");
         let output =
         Command::new("sh")
-        .arg("c")
+        .arg("-c")
         .arg("$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)")
         .output().expect("Failed to install oh my zsh");
 
