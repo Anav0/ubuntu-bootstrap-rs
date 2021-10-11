@@ -24,6 +24,7 @@ impl<'a> AptInstaller<'a> {
 
 impl AppsInstaller for AptInstaller<'_> {
     fn install(&self) -> Result<String, String> {
+        print_header("Installing apt apps");
         let mut apps_file = String::new();
         File::open(self.path_to_app_names)
             .expect("Failed to load apps file")
@@ -65,6 +66,7 @@ impl<'a> CargoInstaller<'a> {
 
 impl AppsInstaller for CargoInstaller<'_> {
     fn install(&self) -> Result<String, String> {
+        print_header("Installing cargo apps");
         let mut apps_file = String::new();
         File::open(self.path_to_app_names)
             .expect("Failed to load cargo apps file")
@@ -94,6 +96,22 @@ impl AppsInstaller for CargoInstaller<'_> {
             println!("{} {}", "Installed".green(), name.green());
         }
         Ok(String::from("Cargo apps installed"))
+    }
+}
+
+struct ZshInstaller;
+impl AppsInstaller for ZshInstaller {
+    fn install(&self) -> Result<String, String> {
+        print_header("Installing oh my zsh");
+        let output =
+        Command::new("sh")
+        .arg("c")
+        .arg("$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)")
+        .output().expect("Failed to install oh my zsh");
+
+        println!("{}", String::from_utf8_lossy(&output.stderr));
+
+        Ok(String::from("Installed oh my zsh"))
     }
 }
 
@@ -185,8 +203,9 @@ fn update_apt() {
 fn install_apps() {
     print_header("Installing programs");
     let apt_installer = AptInstaller::new("./apt_apps");
+    let zsh_installer = ZshInstaller {};
     let cargo_installer = CargoInstaller::new("./cargo_apps");
-    let installers: [&dyn AppsInstaller; 2] = [&apt_installer, &cargo_installer];
+    let installers: [&dyn AppsInstaller; 3] = [&apt_installer, &zsh_installer, &cargo_installer];
 
     for installer in installers {
         match installer.install() {
