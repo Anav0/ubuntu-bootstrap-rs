@@ -2,7 +2,7 @@ use colored::*;
 use core::panic;
 use std::collections::HashSet;
 use std::env::{args, current_exe, temp_dir, var, var_os};
-use std::fs::{copy, read_dir, remove_dir_all, DirBuilder, File, OpenOptions};
+use std::fs::{copy, create_dir_all, read_dir, remove_dir_all, DirBuilder, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
@@ -159,15 +159,21 @@ fn copy_directory(path: &str, tmp_dir: &str, home_dir: &str) {
         let entry = read_dir.expect(format!("Failed to read file {:?} ", path).as_str());
         let entry_path = entry.path();
         let entry_path_str = entry_path.to_str().unwrap();
+
+        if entry_path_str.contains(".git") {
+            continue;
+        }
         if entry.metadata().unwrap().is_dir() {
+            let dst_path_str = entry_path_str.replace(tmp_dir, home_dir);
+            create_dir_all(&dst_path_str)
+                .expect(&format!("Failed to create dir: {}", &dst_path_str));
             copy_directory(entry_path_str, tmp_dir, home_dir);
         } else {
             let dst_path_str = entry_path_str.replace(tmp_dir, home_dir);
-            if dst_path_str.contains(".git") {
-                continue;
-            }
-            copy(entry_path_str, dst_path_str)
-                .expect(&format!("Failed to copy file from {}", entry_path_str));
+            copy(entry_path_str, &dst_path_str).expect(&format!(
+                "Failed to copy file from {} to {}",
+                entry_path_str, &dst_path_str
+            ));
         }
     }
 }
