@@ -108,11 +108,22 @@ struct ZshInstaller;
 impl AppsInstaller for ZshInstaller {
     fn install(&self) -> Result<String, String> {
         print_header("Installing oh my zsh");
-        let output =
-        Command::new("sh")
-        .arg("-c")
-        .arg("$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)")
-        .output().expect("Failed to install oh my zsh");
+        Command::new("wget")
+            .arg("-O")
+            .arg("https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh")
+            .status()
+            .expect("Failed to fetch oh my zsh installer");
+
+        Command::new("chmod")
+            .arg("+x")
+            .arg("install.sh")
+            .status()
+            .expect("Failed to mark oh my zsh installer as executable");
+
+        let output = Command::new("sh")
+            .arg("install.sh")
+            .output()
+            .expect("Failed to run oh my zsh installer");
 
         println!("{}", String::from_utf8_lossy(&output.stderr));
 
