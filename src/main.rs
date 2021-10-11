@@ -156,6 +156,8 @@ fn main() {
 
     install_apps();
 
+    link_leftwm();
+
     //Install fonts?
 
     place_dotfiles(&home_dir, tmp_dir_str);
@@ -163,6 +165,18 @@ fn main() {
     place_exports(&home_dir);
 
     println!("\n{}\n", "Done!".bold().bright_magenta());
+}
+
+fn link_leftwm() {
+    let output = Command::new("sudo")
+        .arg("wget")
+        .arg("-O")
+        .arg("/usr/share/xsessions/leftwm.desktop")
+        .arg("https://raw.githubusercontent.com/leftwm/leftwm/master/leftwm.desktop")
+        .output()
+        .expect("Failed to download leftwm.desktop");
+
+    println!("{}", String::from_utf8_lossy(&output.stderr));
 }
 
 fn print_header(text: &str) {
