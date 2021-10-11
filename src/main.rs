@@ -34,22 +34,28 @@ impl AppsInstaller for AptInstaller<'_> {
         let names: Vec<&str> = apps_file.split("\n").collect();
 
         print!("{}", "Installing apt apps: ".bright_white());
-        for name in &names {
-            print!("{} ", name.bright_white())
+        let mut i = 1;
+        let total = names.len();
+        for name in names {
+            if name.trim() == "" {
+                continue;
+            }
+            print!("[{}/{}] Installing {}", i, total, name);
+            let output = Command::new("sudo")
+                .arg("apt")
+                .arg("install")
+                .arg("-y")
+                .arg(name.trim())
+                .output()
+                .expect(&format!("Failed to install: {}", name));
+
+            println!("{}", String::from_utf8_lossy(&output.stderr));
+            if !output.status.success() {
+                panic!("Failed to install apt apps")
+            }
+            i += 1;
         }
 
-        let output = Command::new("sudo")
-            .arg("apt")
-            .arg("install")
-            .arg("-y")
-            .args(names)
-            .output()
-            .expect("Failed to install apt apps");
-
-        println!("{}", String::from_utf8_lossy(&output.stderr));
-        if !output.status.success() {
-            panic!("Failed to install apt apps")
-        }
         Ok(String::from("Apt apps installed!"))
     }
 }
